@@ -19,3 +19,7 @@ depending on the nano-read function.
 ```lisp
 (nano-read-yes-or-no "WARNING" "Buffer modified, kill it?")
 ```
+
+## Screenshort
+
+![](./screenshot.png)
