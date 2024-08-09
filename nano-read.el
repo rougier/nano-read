@@ -261,7 +261,10 @@ years to DATE and display it."
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil)
-          (space (propertize " " 'face `(:background ,(face-background 'default)))))
+          (space (propertize " " 'face `(:box nil :overline nil :underline nil
+                                         :strike-through nil :inverse-video nil
+                                         :foreground ,(face-foreground 'default)
+                                         :background ,(face-background 'default)))))
       (read-from-minibuffer (concat "  " prompt space) default))))
 
 (defun nano-read-with-date (prompt &optional date default prompt-in-margin)
@@ -276,7 +279,10 @@ PROMPT."
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil)
-          (space (propertize " " 'face `(:background ,(face-background 'default)))))
+          (space (propertize " " 'face `(:box nil :overline nil :underline nil
+                                         :strike-through nil :inverse-video nil
+                                         :foreground ,(face-foreground 'default)
+                                         :background ,(face-background 'default)))))
       (cons (read-from-minibuffer (concat "  " prompt space)
                                   default nano-read-with-date-map)
             nano-read--date))))
@@ -292,7 +298,10 @@ string PROMPT."
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil)
-          (space (propertize " " 'face `(:background ,(face-background 'default)))))
+          (space (propertize " " 'face `(:box nil :overline nil :underline nil
+                                         :strike-through nil :inverse-video nil
+                                         :foreground ,(face-foreground 'default)
+                                         :background ,(face-background 'default)))))
       (cons (read-from-minibuffer (concat "  " prompt space)
                                   default nano-read-with-list-map)
             (nth (car nano-read--list) (cdr nano-read--list))))))
@@ -312,7 +321,10 @@ string PROMPT."
     (define-key nano-read-yes-or-no-map (kbd "<return>") #'exit-minibuffer)
     (let ((history-add-new-input nil)
           (enable-recursive-minibuffers nil)
-          (space (propertize " " 'face `(:background ,(face-background 'default)))))
+          (space (propertize " " 'face `(:box nil :overline nil :underline nil
+                                         :strike-through nil :inverse-video nil
+                                         :foreground ,(face-foreground 'default)
+                                         :background ,(face-background 'default)))))
       (read-from-minibuffer (concat "  " prompt space)
                             default nano-read-yes-or-no-map))
     (nth (car nano-read--list) (cdr nano-read--list))))
