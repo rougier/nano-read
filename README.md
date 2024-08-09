@@ -20,6 +20,6 @@ depending on the nano-read function.
 (nano-read-yes-or-no "WARNING" "Buffer modified, kill it?")
 ```
 
-## Screenshort
+## Screenshot
 
 ![](./screenshot.png)
