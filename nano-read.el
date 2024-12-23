@@ -25,7 +25,7 @@
 
 ;; nano-read functions allows the user to enter text in the minibuffer
 ;; while some information is displayed on the right side (right
-;; margin).  This information can be static, dynamic and/or modifiable
+;; margin). This information can be static, dynamic and/or modifiable
 ;; via some key bindings, depending on the nano-read function.
 ;;
 ;;  - nano-read:             This displays nothing
@@ -46,9 +46,9 @@
 ;; (nano-read-with-result "CALC" #'calc-eval)
 ;; (nano-read-yes-or-no "WARNING" "Buffer modified, kill it?")
 ;: (nano-read-with-list "REPLY" '("ALL" "SENDER"))
-;: (nano-read-with-list " COMMIT" '("REGION" "FILE" "ALL"))
+;; (nano-read-with-list "COMMIT" '("REGION" "FILE" "ALL"))
 ;; (nano-read-with-list "TODO"
-;;                      '(" WORK" " HOME" " TALK" " TRIP"  " MAIL")
+;;                      '("WORK" "HOME" "TALK" "TRIP"  "MAIL")
 ;;                      "Something to do at work")
 
 ;;; NEWS:
@@ -58,28 +58,26 @@
 
 ;;; Code:
 
-(defvar nano-read-face `(:inherit nano-subtle)
-  "Default face ")
+(defface nano-read-face
+  `((t :inherit widget-field))
+  "Face for entry")
+
+(defface nano-read-prompt-default-face
+  `((t :foreground ,(face-background 'default)
+       :background ,(face-foreground 'link nil t)
+       :weight ,(face-attribute 'bold :weight)
+       :box ,(face-foreground 'default)))
+  "Face for default prompt")
+
+(defface nano-read-prompt-warning-face
+  `((t :foreground ,(face-background 'default)
+       :background ,(face-foreground 'error nil t)
+       :weight ,(face-attribute 'bold :weight)
+       :box ,(face-foreground 'error nil t)))
+  "Face for warning prompt")
 
 (defvar nano-read-prompt-face 'nano-read-prompt-default-face
   "Prompt face")
-
-(defvar nano-read-date-face 'nano-default
-  "Face for date (right side)")
-
-(defface nano-read-prompt-default-face
-  `((t :foreground ,(face-foreground 'nano-salient-i)
-       :background ,(face-background 'nano-salient-i nil 'default)
-       :weight ,(face-attribute 'bold :weight)
-       :box ,(face-foreground 'nano-default)))
-  "Face for prompt")
-
-(defface nano-read-prompt-warning-face
-  `((t :foreground ,(face-foreground 'nano-critical-i)
-       :background ,(face-background 'nano-critical-i)
-       :weight ,(face-attribute 'bold :weight)
-       :box ,(face-background 'nano-critical-i)))
-  "Face for prompt")
 
 (defvar nano-read-with-date-map
   (define-keymap
@@ -129,11 +127,9 @@ and allows to select YES or NO on the right side.")
   "Format DATE for minibuffer right margin."
 
   (concat (propertize (format-time-string "%a %d %b %Y, " date)
-                      'face `(:inherit ,nano-read-date-face
-                              :weight ,(face-attribute 'default :weight)))
+                      'face `(:weight ,(face-attribute 'default :weight)))
           (propertize (format-time-string "%H:%M" date)
-                      'face `(:inherit ,nano-read-date-face
-                              :weight ,(face-attribute 'bold :weight)))))
+                      'face `(:weight ,(face-attribute 'bold :weight)))))
 
 (defun nano-read--format-list (list)
   "Format LIST for minibuffer right margin."
@@ -154,71 +150,76 @@ and allows to select YES or NO on the right side.")
     (when (functionp nano-read--eval)
       (condition-case nil
           (let ((result (funcall nano-read--eval content)))
-            (setq nano-read--result (if (stringp result)
-                                        result
-                                      "...")))
-        (setq nano-read--result "Error")))
+            (setq nano-read--result (if (stringp result) result "..."))
+            (setcdr nano-read--info (if (stringp result) result "..."))
+            )
+        (setcdr nano-read--info "Error")))
     (nano-read--update)))
 
 (defun nano-read-with-list--next ()
   "Select next item in current list"
 
   (interactive)
-  (let* ((index (car nano-read--list))
-         (items (cdr nano-read--list))
+  (let* ((list (cdr nano-read--info))
+         (index (car list))
+         (items (cdr list))
          (index (mod (1+ index) (length items))))
-    (setq nano-read--list (cons index items)))
+  (setcdr nano-read--info (cons index items)))
+  (nano-read--update))
+
+(defun nano-read-with-list--prev ()
+  "Select previous item in current list"
+
+  (interactive)
+  (let* ((list (cdr nano-read--info))
+         (index (car list))
+         (items (cdr list))
+         (index (mod (1- index) (length items))))
+    (setcdr nano-read--info (cons index items)))
   (nano-read--update))
 
 (defun nano-read-yes-or-no--yes ()
   "Select YES answer (if present in the current list)"
 
   (interactive)
-  (when (or (member "YES" (cdr nano-read--list))
-            (member "Yes" (cdr nano-read--list))
-            (member "yes" (cdr nano-read--list)))
-    (setq nano-read--list (cons 0 '("YES")))
+  (let ((list (cdr nano-read--info)))
+    (when (or (member "YES" (cdr list))
+              (member "Yes" (cdr list))
+              (member "yes" (cdr list)))
+      (setcdr nano-read--info (cons 0 '("YES"))))
     (exit-minibuffer)))
 
 (defun nano-read-yes-or-no--no ()
   "Select NO answer (if present in the current list)"
 
   (interactive)
-  (when (or (member "NO" (cdr nano-read--list))
-            (member "No" (cdr nano-read--list))
-            (member "no" (cdr nano-read--list)))
-    (setq nano-read--list (cons 0 '("NO")))
+  (let ((list (cdr nano-read--info)))
+    (when (or (member "NO" (cdr list))
+              (member "No" (cdr list))
+              (member "no" (cdr list)))
+      (setcdr nano-read--info (cons 0 '("NO"))))
     (exit-minibuffer)))
-
-(defun nano-read-with-list--prev ()
-  "Select previous item in current list"
-
-  (interactive)
-  (let* ((index (car nano-read--list))
-         (items (cdr nano-read--list))
-         (index (mod (1- index) (length items))))
-    (setq nano-read--list (cons index items)))
-  (nano-read--update))
 
 (defun nano-read-with-date--set-date (minutes hours days months years)
   "Add MINUTES minutes, HOURS hours, DAYS day, MONTH months & YEARS
 years to DATE and display it."
 
-  (let* ((date (decode-time nano-read--date))
+  (let* ((date (cdr nano-read--info))
+         (date (decode-time date))
          (date (encode-time 0
                            (+ minutes (nth 1 date))
                            (+ hours (nth 2 date))
                            (+ days (nth 3 date))
                            (+ months (nth 4 date))
                            (+ years (nth 5 date)))))
-    (setq nano-read--date date)
+    (setcdr nano-read--info date)
     (nano-read--update)))
 
 (defun nano-read-with-date--today ()
   (interactive)
   (let* ((date (decode-time (current-time))))
     (setf (nth 1 date) 0)
-    (setq nano-read--date (encode-time date))
+    (setcdr nano-read--info (encode-time date))
     (nano-read--update)))
 
 (defun nano-read-with-date--forward-30mn ()
@@ -273,11 +274,10 @@ years to DATE and display it."
   "Update minibuffer right margin according to current mode;"
 
   (let* ((inhibit-read-only t)
-        (info (cond (nano-read--date   (nano-read--format-date nano-read--date))
-                    (nano-read--list   (nano-read--format-list nano-read--list))
-                    (nano-read--info   (nano-read--format-info nano-read--info))
-                    (nano-read--result (nano-read--format-info nano-read--result))
-                    (t "")))
+         (formatter (car nano-read--info))
+         (info      (cdr nano-read--info))
+         (info      (funcall formatter info))
+         (info      (if (stringp info) info ""))
         (prompt (substring (minibuffer-prompt) 2 (length (minibuffer-prompt)))))
 
     (add-text-properties (+ 0 (point-min)) (+ 1 (point-min))
@@ -299,7 +299,7 @@ years to DATE and display it."
   (visual-line-mode 1)
   (setq-local nano-read-prompt-in-margin prompt-in-margin)
   (make-local-variable 'face-remapping-alist)
-  (add-to-list 'face-remapping-alist `(default ,nano-read-face))
+  (add-to-list 'face-remapping-alist `(default nano-read-face))
   (nano-read--update))
 
 (defun nano-read--stylize-prompt (prompt)
@@ -310,14 +310,11 @@ years to DATE and display it."
                       (propertize " " 'display '(raise -0.15)))
               'face nano-read-prompt-face))
 
-
 (defun nano-read (prompt &optional default prompt-in-margin)
   "Read a string from the minibuffer, prompting with string PROMPT."
 
-  (setq nano-read--date nil
-        nano-read--list nil
-        nano-read--info nil
-        nano-read--result nil)
+
+  (setq nano-read--info (cons #'identity ""))
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil))
@@ -329,11 +326,9 @@ years to DATE and display it."
   "Read a string from the minibuffer, prompting with string PROMPT while
 displaying evaluation of the content using EVAL-FUN."
 
-  (setq nano-read--date nil
-        nano-read--list nil
-        nano-read--info nil
-        nano-read--result ""
-        nano-read--eval eval-fun)
+  (setq nano-read--info (cons #'nano-read--format-info
+                              ""))
+  (setq nano-read--eval eval-fun)
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil))
@@ -349,11 +344,8 @@ displaying evaluation of the content using EVAL-FUN."
 (defun nano-read-with-info (prompt info &optional default prompt-in-margin)
   "Read a string from the minibuffer, prompting with string PROMPT while displaying INFO."
 
-  (setq nano-read--date nil
-        nano-read--list nil
-        nano-read--info info
-        nano-read--result nil
-        nano-read--eval nil)
+  (setq nano-read--info (cons #'nano-read--format-info
+                              info))
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil))
@@ -367,11 +359,8 @@ PROMPT."
 
   (let* ((date (decode-time (or date (current-time)))))
     (setf (nth 1 date) 0)
-    (setq nano-read--date (encode-time date)
-          nano-read--list nil
-          nano-read--info nil
-          nano-read--result nil
-          nano-read--eval nil))
+    (setq nano-read--info (cons #'nano-read--format-date
+                                (encode-time date))))
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
     (let ((enable-recursive-minibuffers nil))
@@ -379,36 +368,29 @@ PROMPT."
                                           (nano-read--stylize-prompt prompt)
                                           " ")
                                   default nano-read-with-date-map)
-            nano-read--date))))
+            (cdr nano-read--info)))))
 
 (defun nano-read-with-list (prompt list &optional default prompt-in-margin)
   "Read a string and a choice in LIST from the minibuffer, prompting with
 string PROMPT."
 
-  (setq nano-read--date nil
-        nano-read--list (cons 0 list)
-        nano-read--info nil
-        nano-read--result nil
-        nano-read--eval nil)
+  (setq nano-read--info (cons #'nano-read--format-list
+                              (cons 0 list)))
   (minibuffer-with-setup-hook
       (:append (lambda () (nano-read--setup prompt-in-margin)))
-    (let ((enable-recursive-minibuffers nil)
-          ;; (nano-read-info-face 'nano-strong)
-          )
+    (let ((enable-recursive-minibuffers nil))
       (cons (read-from-minibuffer (concat "  "
                                           (nano-read--stylize-prompt prompt)
                                           " ")
                                   default nano-read-with-list-map)
-            (nth (car nano-read--list) (cdr nano-read--list))))))
+            (let ((list (cdr nano-read--info)))
+              (nth (car list) (cdr list)))))))
 
 (defun nano-read-yes-or-no (prompt &optional default list prompt-in-margin)
   "Read a YES/NO answer from the minibuffer"
 
-  (setq nano-read--date nil
-        nano-read--list (cons 0 (or list (list "YES" "NO")))
-        nano-read--info nil
-        nano-read--result nil
-        nano-read--eval nil)
+  (setq nano-read--info (cons #'nano-read--format-list
+                              (cons 0 (or list (list "YES" "NO")))))
   (minibuffer-with-setup-hook
       (:append (lambda ()
                  (nano-read--setup prompt-in-margin)
@@ -424,7 +406,8 @@ string PROMPT."
                                     (nano-read--stylize-prompt prompt)
                                     " ")
                             default nano-read-yes-or-no-map))
-    (nth (car nano-read--list) (cdr nano-read--list))))
+    (let ((list (cdr nano-read--info)))
+      (nth (car list) (cdr list)))))
 
 (provide 'nano-read)
 ;;; nano-read.el ends here
